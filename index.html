@@ -682,7 +682,7 @@
                     <li>สร้าง Repository ใหม่</li>
                     <li>อัปโหลดไฟล์นี้ชื่อ <code>index.html</code></li>
                     <li>ไปที่ Settings → Pages</li>
-                    <li>เลือก Branch เป็น <code>main</code> และ Folder เป็น <code>/root</code></li>
+                    <li>เลือก Branch เป็น <code>main</code> และ Folder เป็น <code>/(root)</code></li>
                     <li>เปิด URL ที่ GitHub Pages สร้างให้</li>
                   </ol>
                 </div>
@@ -728,13 +728,16 @@
 
     const SUPABASE_URL = 'https://ncctdcdlljjxblunwhor.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5jY3RkY2RsbGpqeGJsdW53aG9yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyMTI1MzMsImV4cCI6MjA5Mzc4ODUzM30.K7in1PsAqoeHsK8MRwpJsXUSE4Izm6j-y_bTQY6rGUI';
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const supabaseClient = window.supabase?.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) || null;
+
     /* =========================================================
-       CONFIG / MOCK STORAGE
-       หมายเหตุ: ปัจจุบันใช้ localStorage สำหรับทดสอบ
-       เมื่อต่อ Supabase ให้แทนที่ฟังก์ชัน saveRecords(), loadRecords()
+       CONFIG / STORAGE
+       - ใช้ Supabase เป็นหลัก
+       - ถ้า Supabase ใช้งานไม่ได้ จะ fallback เป็น localStorage เพื่อให้หน้าเว็บยังใช้งานได้
     ========================================================== */
     const STORAGE_KEY = 'surgical_tool_receiving_records_v1';
+    const MAX_IMAGE_SIZE_MB = 5;
+    const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
 
     const statusSteps = [
       'รับเครื่องมือแล้ว',
@@ -746,6 +749,7 @@
 
     let records = [];
     let toolItemCount = 0;
+    let isSupabaseOnline = false;
 
     /* =========================================================
        INIT
@@ -753,11 +757,11 @@
     document.addEventListener('DOMContentLoaded', async () => {
       setTodayText();
       setCurrentReceiveTime();
-      await loadRecordsFromSupabase();
       addToolItem();
+      bindEvents();
+      await loadRecordsFromSupabase();
       renderDashboard();
       renderTracking();
-      bindEvents();
     });
 
     /* =========================================================
@@ -797,8 +801,7 @@
        DATE HELPERS
     ========================================================== */
     function setTodayText() {
-      const today = new Date();
-      document.getElementById('todayText').textContent = formatDateThai(today);
+      document.getElementById('todayText').textContent = formatDateThai(new Date());
     }
 
     function setCurrentReceiveTime() {
@@ -808,6 +811,7 @@
     function formatDateThai(dateValue) {
       if (!dateValue) return '-';
       const date = new Date(dateValue);
+      if (Number.isNaN(date.getTime())) return '-';
       return date.toLocaleDateString('th-TH', {
         year: 'numeric',
         month: 'short',
@@ -818,6 +822,7 @@
     function formatDateTimeThai(dateValue) {
       if (!dateValue) return '-';
       const date = new Date(dateValue);
+      if (Number.isNaN(date.getTime())) return '-';
       return date.toLocaleString('th-TH', {
         year: 'numeric',
         month: 'short',
@@ -876,6 +881,7 @@
             <div class="col-12">
               <label class="form-label">อัปโหลดรูปเครื่องมือ</label>
               <input type="file" class="form-control tool-images" accept="image/*" multiple>
+              <div class="form-text">รองรับไฟล์รูปภาพ ขนาดไม่เกิน ${MAX_IMAGE_SIZE_MB} MB ต่อรูป</div>
               <div class="image-preview-grid"></div>
             </div>
           </div>
@@ -904,12 +910,35 @@
     }
 
     /* =========================================================
-       IMAGE PREVIEW
+       IMAGE PREVIEW / VALIDATION
     ========================================================== */
+    function validateImageFiles(fileInput) {
+      const files = Array.from(fileInput.files || []);
+
+      for (const file of files) {
+        if (!file.type.startsWith('image/')) {
+          throw new Error(`ไฟล์ ${file.name} ไม่ใช่รูปภาพ`);
+        }
+        if (file.size > MAX_IMAGE_SIZE_BYTES) {
+          throw new Error(`ไฟล์ ${file.name} มีขนาดเกิน ${MAX_IMAGE_SIZE_MB} MB`);
+        }
+      }
+
+      return files;
+    }
+
     function previewImages(event, itemElement) {
-      const files = Array.from(event.target.files);
       const previewGrid = itemElement.querySelector('.image-preview-grid');
       previewGrid.innerHTML = '';
+
+      let files;
+      try {
+        files = validateImageFiles(event.target);
+      } catch (error) {
+        event.target.value = '';
+        showToast(error.message, 'error');
+        return;
+      }
 
       files.forEach(file => {
         const reader = new FileReader();
@@ -917,6 +946,7 @@
           const img = document.createElement('img');
           img.src = e.target.result;
           img.className = 'image-preview';
+          img.alt = file.name;
           previewGrid.appendChild(img);
         };
         reader.readAsDataURL(file);
@@ -924,11 +954,12 @@
     }
 
     function readFilesAsBase64(fileInput) {
-      const files = Array.from(fileInput.files || []);
+      const files = validateImageFiles(fileInput);
       return Promise.all(files.map(file => {
-        return new Promise(resolve => {
+        return new Promise((resolve, reject) => {
           const reader = new FileReader();
           reader.onload = e => resolve(e.target.result);
+          reader.onerror = () => reject(new Error(`อ่านไฟล์ ${file.name} ไม่สำเร็จ`));
           reader.readAsDataURL(file);
         });
       }));
@@ -939,26 +970,35 @@
     ========================================================== */
     async function handleSubmit(event) {
       event.preventDefault();
-    
+      setSubmitting(true);
+
       try {
         const toolCards = Array.from(document.querySelectorAll('.tool-item-card'));
         const tools = [];
-    
+
         for (const card of toolCards) {
+          const toolName = card.querySelector('.tool-name').value.trim();
+          const toolType = card.querySelector('.tool-type').value;
+          const sterileStatus = card.querySelector('.sterile-status').value;
+          const quantity = Number(card.querySelector('.tool-quantity').value || 1);
           const images = await readFilesAsBase64(card.querySelector('.tool-images'));
-    
+
+          if (!toolName || !toolType || !sterileStatus || quantity < 1) {
+            throw new Error('กรุณากรอกข้อมูลชุดเครื่องมือให้ครบถ้วน');
+          }
+
           tools.push({
-            id: crypto.randomUUID(),
-            toolName: card.querySelector('.tool-name').value.trim(),
-            toolType: card.querySelector('.tool-type').value,
-            sterileStatus: card.querySelector('.sterile-status').value,
-            quantity: Number(card.querySelector('.tool-quantity').value || 1),
+            id: safeUUID(),
+            toolName,
+            toolType,
+            sterileStatus,
+            quantity,
             images
           });
         }
-    
+
         const record = {
-          id: crypto.randomUUID(),
+          id: safeUUID(),
           companyName: document.getElementById('companyName').value.trim(),
           surgeonName: document.getElementById('surgeonName').value.trim(),
           surgeryDate: document.getElementById('surgeryDate').value,
@@ -969,28 +1009,38 @@
           tools,
           createdAt: new Date().toISOString()
         };
-    
-        // บันทึกไป Supabase ก่อน
+
         await saveRecordToSupabase(record);
-    
-        // ถ้าบันทึกสำเร็จ ค่อยเพิ่มเข้า records หน้าเว็บ
         records.unshift(record);
-    
-        // จะเก็บ localStorage สำรองไว้ก็ได้
         saveRecords();
-    
+
         resetForm();
         renderDashboard();
         renderTracking();
         switchPage('dashboardPage');
-        showToast('บันทึกข้อมูลสำเร็จ', 'success');
-    
+        showToast(isSupabaseOnline ? 'บันทึกข้อมูลสำเร็จ' : 'บันทึกสำเร็จในเครื่อง เนื่องจาก Supabase ยังเชื่อมต่อไม่ได้', isSupabaseOnline ? 'success' : 'warning');
       } catch (error) {
         console.error('บันทึกข้อมูลผิดพลาด:', error);
-        showToast('บันทึกข้อมูลไม่สำเร็จ กรุณาตรวจสอบ Supabase', 'error');
+        showToast(error.message || 'บันทึกข้อมูลไม่สำเร็จ กรุณาตรวจสอบข้อมูลอีกครั้ง', 'error');
+      } finally {
+        setSubmitting(false);
       }
     }
 
+    function setSubmitting(isLoading) {
+      const submitBtn = document.querySelector('#receiveForm button[type="submit"]');
+      const resetBtn = document.getElementById('resetFormBtn');
+      const addBtn = document.getElementById('addToolBtn');
+
+      if (submitBtn) {
+        submitBtn.disabled = isLoading;
+        submitBtn.innerHTML = isLoading
+          ? '<span class="spinner-border spinner-border-sm me-1"></span> กำลังบันทึก...'
+          : '<i class="bi bi-save2"></i> บันทึกข้อมูล';
+      }
+      if (resetBtn) resetBtn.disabled = isLoading;
+      if (addBtn) addBtn.disabled = isLoading;
+    }
 
     function resetForm() {
       document.getElementById('receiveForm').reset();
@@ -999,7 +1049,6 @@
       setCurrentReceiveTime();
       addToolItem();
     }
-
 
     /* =========================================================
        DASHBOARD RENDER
@@ -1026,7 +1075,8 @@
       }
 
       container.innerHTML = filtered.map(record => {
-        const firstTool = record.tools[0] || {};
+        const tools = Array.isArray(record.tools) ? record.tools : [];
+        const firstTool = tools[0] || {};
         const firstImage = firstTool.images?.[0] || '';
         return `
           <div class="col-md-6 col-xl-4">
@@ -1037,7 +1087,7 @@
                 ${getStatusBadge(record.currentStatus)}
               </div>
               <h5 class="fw-bold mb-1">${escapeHtml(firstTool.toolName || '-')}</h5>
-              <div class="small text-muted mb-2">รวม ${record.tools.length} ชุดเครื่องมือ</div>
+              <div class="small text-muted mb-2">รวม ${tools.length} ชุดเครื่องมือ</div>
               <div class="small mb-1"><i class="bi bi-calendar-event"></i> ผ่าตัด: ${formatDateThai(record.surgeryDate)}</div>
               <div class="small mb-1"><i class="bi bi-clock"></i> รับ: ${formatDateTimeThai(record.receivedAt)}</div>
               <div class="small mb-3"><i class="bi bi-person-check"></i> ผู้รับ: ${escapeHtml(record.receiverName)}</div>
@@ -1059,12 +1109,13 @@
     function getFilteredRecords(search, statusFilter = '') {
       return records
         .filter(record => {
+          const tools = Array.isArray(record.tools) ? record.tools : [];
           const text = [
             record.companyName,
             record.surgeonName,
             record.receiverName,
             record.surgeryDate,
-            ...record.tools.map(tool => tool.toolName)
+            ...tools.map(tool => tool.toolName)
           ].join(' ').toLowerCase();
 
           const matchSearch = !search || text.includes(search);
@@ -1076,7 +1127,7 @@
 
     function updateStats() {
       const total = records.length;
-      const sterile = records.filter(r => r.tools.some(t => t.sterileStatus === 'ต้องทำ Sterile')).length;
+      const sterile = records.filter(r => Array.isArray(r.tools) && r.tools.some(t => t.sterileStatus === 'ต้องทำ Sterile')).length;
       const ready = records.filter(r => r.currentStatus === 'พร้อมใช้งาน').length;
       const returned = records.filter(r => r.currentStatus === 'ส่งคืนบริษัท').length;
 
@@ -1094,7 +1145,8 @@
       const record = records.find(r => r.id === recordId);
       if (!record) return;
 
-      const toolsHtml = record.tools.map((tool, index) => `
+      const tools = Array.isArray(record.tools) ? record.tools : [];
+      const toolsHtml = tools.map((tool, index) => `
         <div class="border rounded-4 p-3 mb-3 bg-light">
           <div class="d-flex justify-content-between gap-2 mb-2">
             <h6 class="fw-bold text-primary mb-0">ชุดที่ ${index + 1}: ${escapeHtml(tool.toolName)}</h6>
@@ -1102,7 +1154,7 @@
           </div>
           <div class="row small mb-2">
             <div class="col-md-6"><strong>สถานะ Sterile:</strong> ${escapeHtml(tool.sterileStatus)}</div>
-            <div class="col-md-6"><strong>จำนวน:</strong> ${tool.quantity}</div>
+            <div class="col-md-6"><strong>จำนวน:</strong> ${escapeHtml(tool.quantity)}</div>
           </div>
           <div class="image-preview-grid">
             ${(tool.images || []).map(img => `<img src="${img}" class="image-preview" alt="รูปเครื่องมือ">`).join('') || '<span class="text-muted small">ไม่มีรูปภาพ</span>'}
@@ -1122,7 +1174,7 @@
         </div>
         <hr>
         <h6 class="fw-bold text-primary mb-3"><i class="bi bi-box-seam"></i> รายการเครื่องมือทั้งหมด</h6>
-        ${toolsHtml}
+        ${toolsHtml || '<div class="text-muted small">ไม่มีรายการเครื่องมือ</div>'}
       `;
 
       const modal = new bootstrap.Modal(document.getElementById('detailModal'));
@@ -1148,15 +1200,16 @@
       }
 
       container.innerHTML = filtered.map(record => {
-        const activeIndex = statusSteps.indexOf(record.currentStatus);
-        const toolNames = record.tools.map(t => t.toolName).join(', ');
+        const tools = Array.isArray(record.tools) ? record.tools : [];
+        const activeIndex = Math.max(0, statusSteps.indexOf(record.currentStatus));
+        const toolNames = tools.map(t => t.toolName).join(', ');
 
         return `
           <div class="tracking-card">
             <div class="d-flex flex-column flex-lg-row justify-content-between gap-2">
               <div>
                 <h5 class="fw-bold text-primary mb-1">${escapeHtml(record.companyName)}</h5>
-                <div class="text-muted small">${escapeHtml(toolNames)}</div>
+                <div class="text-muted small">${escapeHtml(toolNames || '-')}</div>
                 <div class="small mt-1"><i class="bi bi-calendar-event"></i> วันที่ผ่าตัด ${formatDateThai(record.surgeryDate)}</div>
               </div>
               <div class="d-flex flex-column gap-2 align-items-start align-items-lg-end">
@@ -1183,17 +1236,27 @@
     /* =========================================================
        STATUS UPDATE
     ========================================================== */
-    function updateRecordStatus(recordId, newStatus) {
+    async function updateRecordStatus(recordId, newStatus) {
       const record = records.find(r => r.id === recordId);
       if (!record) return;
 
+      const oldStatus = record.currentStatus;
       record.currentStatus = newStatus;
       saveRecords();
       renderDashboard();
       renderTracking();
-      showToast('อัปเดตสถานะสำเร็จ', 'success');
 
-      // TODO: เมื่อต่อ Supabase ให้เรียก await updateStatusInSupabase(recordId, newStatus)
+      try {
+        await updateStatusInSupabase(recordId, newStatus);
+        showToast(isSupabaseOnline ? 'อัปเดตสถานะสำเร็จ' : 'อัปเดตสถานะในเครื่องแล้ว', isSupabaseOnline ? 'success' : 'warning');
+      } catch (error) {
+        console.error('อัปเดตสถานะผิดพลาด:', error);
+        record.currentStatus = oldStatus;
+        saveRecords();
+        renderDashboard();
+        renderTracking();
+        showToast('อัปเดตสถานะไม่สำเร็จ จึงย้อนกลับสถานะเดิม', 'error');
+      }
     }
 
     function getStatusBadge(status) {
@@ -1204,7 +1267,7 @@
         'พร้อมใช้งาน': 'badge-ready',
         'ส่งคืนบริษัท': 'badge-returned'
       };
-      return `<span class="badge-status ${classMap[status] || 'badge-received'}">${escapeHtml(status)}</span>`;
+      return `<span class="badge-status ${classMap[status] || 'badge-received'}">${escapeHtml(status || 'รับเครื่องมือแล้ว')}</span>`;
     }
 
     /* =========================================================
@@ -1212,16 +1275,27 @@
     ========================================================== */
     function showToast(message, type = 'success') {
       const toast = document.createElement('div');
+      const iconMap = {
+        success: 'bi-check-circle',
+        warning: 'bi-exclamation-triangle',
+        error: 'bi-x-circle'
+      };
+      const colorMap = {
+        success: '#198754',
+        warning: '#f0ad4e',
+        error: '#dc3545'
+      };
+
       toast.className = 'position-fixed top-0 end-0 m-3 p-3 rounded-4 text-white shadow';
       toast.style.zIndex = 2000;
-      toast.style.background = type === 'success' ? '#198754' : '#dc3545';
-      toast.innerHTML = `<i class="bi bi-check-circle"></i> ${message}`;
+      toast.style.background = colorMap[type] || colorMap.success;
+      toast.innerHTML = `<i class="bi ${iconMap[type] || iconMap.success}"></i> ${escapeHtml(message)}`;
       document.body.appendChild(toast);
-      setTimeout(() => toast.remove(), 2200);
+      setTimeout(() => toast.remove(), 2600);
     }
 
     /* =========================================================
-       SECURITY HELPER
+       SECURITY / UTILS
     ========================================================== */
     function escapeHtml(value) {
       return String(value ?? '')
@@ -1232,37 +1306,121 @@
         .replaceAll("'", '&#039;');
     }
 
+    function safeUUID() {
+      return crypto.randomUUID?.() || `id_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+    }
+
+    function normalizeRecord(item) {
+      return {
+        id: item.id,
+        companyName: item.companyName ?? item.company_name ?? '',
+        surgeonName: item.surgeonName ?? item.surgeon_name ?? '',
+        surgeryDate: item.surgeryDate ?? item.surgery_date ?? '',
+        receivedAt: item.receivedAt ?? item.received_at ?? item.created_at ?? '',
+        receiverName: item.receiverName ?? item.receiver_name ?? '',
+        note: item.note ?? '',
+        currentStatus: item.currentStatus ?? item.current_status ?? 'รับเครื่องมือแล้ว',
+        tools: Array.isArray(item.tools) ? item.tools : [],
+        createdAt: item.createdAt ?? item.created_at ?? ''
+      };
+    }
+
     /* =========================================================
-       SUPABASE READY FUNCTIONS
-       เปิดใช้เมื่อติดตั้ง @supabase/supabase-js แล้ว
+       LOCAL STORAGE FUNCTIONS
     ========================================================== */
+    function saveRecords() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+      } catch (error) {
+        console.warn('บันทึก localStorage ไม่สำเร็จ:', error);
+        showToast('พื้นที่จัดเก็บในเครื่องเต็ม อาจเกิดจากรูปภาพมีขนาดใหญ่เกินไป', 'error');
+      }
+    }
+
+    function loadRecords() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        records = saved ? JSON.parse(saved).map(normalizeRecord) : [];
+      } catch (error) {
+        console.warn('อ่าน localStorage ไม่สำเร็จ:', error);
+        records = [];
+      }
+    }
+
+    /* =========================================================
+       SUPABASE FUNCTIONS
+    ========================================================== */
+    async function loadRecordsFromSupabase() {
+      if (!supabaseClient) {
+        isSupabaseOnline = false;
+        loadRecords();
+        showToast('โหลดจาก localStorage เพราะไม่พบ Supabase SDK', 'warning');
+        return;
+      }
+
+      try {
+        const { data, error } = await supabaseClient
+          .from('receiving_records')
+          .select('*')
+          .order('received_at', { ascending: false });
+
+        if (error) throw error;
+
+        records = (data || []).map(normalizeRecord);
+        isSupabaseOnline = true;
+        saveRecords();
+      } catch (error) {
+        console.warn('โหลดข้อมูลจาก Supabase ไม่สำเร็จ ใช้ localStorage แทน:', error);
+        isSupabaseOnline = false;
+        loadRecords();
+        showToast('เชื่อมต่อ Supabase ไม่สำเร็จ จึงโหลดข้อมูลสำรองจากเครื่อง', 'warning');
+      }
+    }
+
     async function saveRecordToSupabase(record) {
+      if (!supabaseClient) {
+        isSupabaseOnline = false;
+        return null;
+      }
+
+      const payload = {
+        id: record.id,
+        company_name: record.companyName,
+        surgeon_name: record.surgeonName,
+        surgery_date: record.surgeryDate,
+        received_at: record.receivedAt,
+        receiver_name: record.receiverName,
+        note: record.note,
+        current_status: record.currentStatus,
+        tools: record.tools,
+        created_at: record.createdAt
+      };
+
       const { data, error } = await supabaseClient
         .from('receiving_records')
-        .insert([{
-          id: record.id,
-          company_name: record.companyName,
-          surgeon_name: record.surgeonName,
-          surgery_date: record.surgeryDate,
-          received_at: record.receivedAt,
-          receiver_name: record.receiverName,
-          note: record.note,
-          current_status: record.currentStatus,
-          tools: record.tools
-        }])
+        .insert([payload])
         .select();
-    
+
       if (error) throw error;
+      isSupabaseOnline = true;
       return data;
     }
 
     async function updateStatusInSupabase(recordId, newStatus) {
-       const { data, error } = await supabase
-         .from('receiving_records')
-         .update({ current_status: newStatus })
-         .eq('id', recordId);
-       if (error) throw error;
-       return data;
+      if (!supabaseClient) {
+        isSupabaseOnline = false;
+        return null;
+      }
+
+      const { data, error } = await supabaseClient
+        .from('receiving_records')
+        .update({ current_status: newStatus })
+        .eq('id', recordId)
+        .select();
+
+      if (error) throw error;
+      isSupabaseOnline = true;
+      return data;
     }
   </script>
 </body>
