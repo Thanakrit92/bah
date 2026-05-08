@@ -1,0 +1,1260 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ระบบรับ-ส่งเครื่องมือผ่าตัด</title>
+
+  <!-- Google Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+  <style>
+    /* =========================
+       GLOBAL THEME
+    ========================== */
+    :root {
+      --primary: #0b4f8a;
+      --primary-dark: #073b68;
+      --secondary: #e8f2fb;
+      --gold: #c9a24a;
+      --bg: #f4f7fb;
+      --card: #ffffff;
+      --text: #203040;
+      --muted: #718096;
+      --border: #dce6f1;
+      --success: #198754;
+      --warning: #f0ad4e;
+      --danger: #dc3545;
+      --shadow: 0 14px 35px rgba(9, 60, 105, 0.10);
+      --radius-xl: 24px;
+      --radius-lg: 18px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Prompt', sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(11, 79, 138, 0.12), transparent 35%),
+        linear-gradient(180deg, #f7fbff 0%, #eef4fa 100%);
+      min-height: 100vh;
+      padding-bottom: 92px;
+    }
+
+    a {
+      text-decoration: none;
+    }
+
+    .app-shell {
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 18px;
+    }
+
+    /* =========================
+       HEADER
+    ========================== */
+    .app-header {
+      background: linear-gradient(135deg, var(--primary), #1268ad);
+      border-radius: var(--radius-xl);
+      color: #fff;
+      padding: 22px;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .app-header::after {
+      content: "";
+      position: absolute;
+      right: -90px;
+      top: -90px;
+      width: 230px;
+      height: 230px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    .logo-box {
+      width: 58px;
+      height: 58px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.18);
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 30px;
+      backdrop-filter: blur(8px);
+    }
+
+    .header-title {
+      font-weight: 700;
+      letter-spacing: -0.2px;
+    }
+
+    .header-subtitle {
+      opacity: 0.84;
+      font-weight: 300;
+    }
+
+    .header-stat {
+      background: rgba(255,255,255,0.14);
+      border: 1px solid rgba(255,255,255,0.25);
+      border-radius: 18px;
+      padding: 12px 16px;
+      min-width: 140px;
+    }
+
+    /* =========================
+       LAYOUT / NAVIGATION
+    ========================== */
+    .main-layout {
+      display: grid;
+      grid-template-columns: 250px 1fr;
+      gap: 18px;
+      margin-top: 18px;
+    }
+
+    .sidebar {
+      background: rgba(255, 255, 255, 0.82);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow);
+      padding: 14px;
+      height: fit-content;
+      position: sticky;
+      top: 18px;
+      backdrop-filter: blur(10px);
+    }
+
+    .nav-btn {
+      width: 100%;
+      border: 0;
+      background: transparent;
+      color: #526173;
+      padding: 13px 14px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transition: 0.2s ease;
+      text-align: left;
+      font-weight: 500;
+      margin-bottom: 6px;
+    }
+
+    .nav-btn:hover,
+    .nav-btn.active {
+      background: linear-gradient(135deg, var(--primary), #1870b9);
+      color: white;
+      transform: translateY(-1px);
+    }
+
+    .bottom-nav {
+      display: none;
+      position: fixed;
+      bottom: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: calc(100% - 26px);
+      max-width: 520px;
+      background: rgba(255,255,255,0.94);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      box-shadow: 0 10px 34px rgba(0,0,0,0.16);
+      padding: 8px;
+      z-index: 1000;
+      backdrop-filter: blur(12px);
+    }
+
+    .bottom-nav .nav-btn {
+      margin: 0;
+      justify-content: center;
+      flex-direction: column;
+      gap: 2px;
+      font-size: 11px;
+      padding: 8px 5px;
+      border-radius: 18px;
+    }
+
+    .bottom-nav .nav-btn i {
+      font-size: 20px;
+    }
+
+    .content-area {
+      min-width: 0;
+    }
+
+    .page-section {
+      display: none;
+      animation: fadeIn 0.25s ease-in-out;
+    }
+
+    .page-section.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* =========================
+       CARD / FORM
+    ========================== */
+    .glass-card {
+      background: rgba(255,255,255,0.9);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow);
+      padding: 20px;
+    }
+
+    .section-title {
+      font-weight: 700;
+      color: var(--primary-dark);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .form-label {
+      font-weight: 600;
+      color: #34495e;
+      margin-bottom: 6px;
+    }
+
+    .form-control,
+    .form-select {
+      border-radius: 14px;
+      border-color: var(--border);
+      padding: 11px 13px;
+    }
+
+    .form-control:focus,
+    .form-select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 0.2rem rgba(11,79,138,0.12);
+    }
+
+    .btn-medical {
+      background: linear-gradient(135deg, var(--primary), #1870b9);
+      color: white;
+      border: 0;
+      border-radius: 16px;
+      padding: 12px 18px;
+      font-weight: 600;
+      box-shadow: 0 10px 22px rgba(11,79,138,0.22);
+      transition: 0.2s ease;
+    }
+
+    .btn-medical:hover {
+      color: white;
+      transform: translateY(-1px);
+      box-shadow: 0 12px 26px rgba(11,79,138,0.28);
+    }
+
+    .btn-soft {
+      background: #edf5fc;
+      color: var(--primary-dark);
+      border: 1px solid #d4e7f6;
+      border-radius: 16px;
+      padding: 12px 18px;
+      font-weight: 600;
+    }
+
+    .tool-item-card {
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      padding: 16px;
+      background: #fbfdff;
+      margin-bottom: 14px;
+      position: relative;
+    }
+
+    .tool-item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .tool-index {
+      background: var(--secondary);
+      color: var(--primary-dark);
+      border-radius: 999px;
+      padding: 7px 12px;
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    .image-preview-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .image-preview {
+      width: 78px;
+      height: 78px;
+      object-fit: cover;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      box-shadow: 0 8px 18px rgba(0,0,0,0.08);
+    }
+
+    /* =========================
+       DASHBOARD
+    ========================== */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .stat-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      padding: 16px;
+      box-shadow: var(--shadow);
+    }
+
+    .stat-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--secondary);
+      color: var(--primary);
+      font-size: 22px;
+      margin-bottom: 10px;
+    }
+
+    .record-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      padding: 16px;
+      box-shadow: 0 8px 24px rgba(9, 60, 105, 0.08);
+      transition: 0.2s ease;
+      height: 100%;
+    }
+
+    .record-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 14px 32px rgba(9, 60, 105, 0.13);
+    }
+
+    .record-image {
+      width: 100%;
+      height: 150px;
+      object-fit: cover;
+      border-radius: 18px;
+      background: #edf2f7;
+      margin-bottom: 12px;
+    }
+
+    .badge-status {
+      border-radius: 999px;
+      padding: 7px 10px;
+      font-weight: 600;
+      font-size: 12px;
+    }
+
+    .badge-sterile { background: #fff3cd; color: #8a6200; }
+    .badge-received { background: #d1e7dd; color: #0f5132; }
+    .badge-returned { background: #e2e3e5; color: #41464b; }
+    .badge-ready { background: #cfe2ff; color: #084298; }
+    .badge-check { background: #f8d7da; color: #842029; }
+
+    .empty-state {
+      text-align: center;
+      padding: 46px 20px;
+      color: var(--muted);
+    }
+
+    .empty-state i {
+      font-size: 52px;
+      color: #b8c7d6;
+      margin-bottom: 12px;
+    }
+
+    /* =========================
+       TRACKING TIMELINE
+    ========================== */
+    .tracking-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      padding: 18px;
+      margin-bottom: 14px;
+      box-shadow: 0 8px 22px rgba(9,60,105,0.08);
+    }
+
+    .stepper {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .step {
+      text-align: center;
+      position: relative;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .step-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: #e9eef5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 7px;
+      font-weight: 700;
+      color: #8391a2;
+    }
+
+    .step.active .step-icon {
+      background: linear-gradient(135deg, var(--primary), #1870b9);
+      color: #fff;
+    }
+
+    .step.active {
+      color: var(--primary-dark);
+      font-weight: 600;
+    }
+
+    /* =========================
+       RESPONSIVE
+    ========================== */
+    @media (max-width: 992px) {
+      .main-layout {
+        grid-template-columns: 1fr;
+      }
+      .sidebar {
+        display: none;
+      }
+      .bottom-nav {
+        display: flex;
+        gap: 6px;
+      }
+      .stat-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 576px) {
+      .app-shell {
+        padding: 12px;
+      }
+      .app-header {
+        padding: 18px;
+      }
+      .header-stat {
+        width: 100%;
+      }
+      .stat-grid {
+        grid-template-columns: 1fr;
+      }
+      .stepper {
+        grid-template-columns: 1fr;
+        text-align: left;
+      }
+      .step {
+        display: flex;
+        text-align: left;
+        align-items: center;
+        gap: 10px;
+      }
+      .step-icon {
+        margin: 0;
+        flex: 0 0 auto;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app-shell">
+    <!-- =========================
+         HEADER
+    ========================== -->
+    <header class="app-header">
+      <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 position-relative" style="z-index: 2;">
+        <div class="d-flex align-items-center gap-3">
+          <div class="logo-box">
+            <i class="bi bi-hospital"></i>
+          </div>
+          <div>
+            <h1 class="h4 mb-1 header-title">ระบบรับ-ส่งเครื่องมือผ่าตัด</h1>
+            <div class="header-subtitle">Surgical Instrument Receiving & Tracking System</div>
+          </div>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+          <div class="header-stat">
+            <div class="small opacity-75">วันที่ปัจจุบัน</div>
+            <strong id="todayText">-</strong>
+          </div>
+          <div class="header-stat">
+            <div class="small opacity-75">จำนวนรายการ</div>
+            <strong id="headerTotal">0 รายการ</strong>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="main-layout">
+      <!-- =========================
+           SIDEBAR NAVIGATION
+      ========================== -->
+      <aside class="sidebar">
+        <button class="nav-btn active" data-page="formPage"><i class="bi bi-plus-circle"></i> รับเครื่องมือ</button>
+        <button class="nav-btn" data-page="dashboardPage"><i class="bi bi-grid-1x2"></i> Dashboard</button>
+        <button class="nav-btn" data-page="trackingPage"><i class="bi bi-signpost-split"></i> ติดตามสถานะ</button>
+        <button class="nav-btn" data-page="settingPage"><i class="bi bi-cloud-upload"></i> Supabase Ready</button>
+      </aside>
+
+      <!-- =========================
+           MAIN CONTENT
+      ========================== -->
+      <main class="content-area">
+        <!-- FORM PAGE -->
+        <section id="formPage" class="page-section active">
+          <div class="glass-card">
+            <h2 class="section-title"><i class="bi bi-clipboard2-pulse"></i> แบบฟอร์มรับเครื่องมือ</h2>
+
+            <form id="receiveForm">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label">บริษัทที่มาส่งเครื่องมือ</label>
+                  <input type="text" class="form-control" id="companyName" placeholder="เช่น บริษัท ABC Medical" required>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">แพทย์ผ่าตัด</label>
+                  <input type="text" class="form-control" id="surgeonName" placeholder="ชื่อแพทย์ผ่าตัด" required>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">วันที่ผ่าตัด</label>
+                  <input type="date" class="form-control" id="surgeryDate" required>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">วันที่และเวลารับเครื่องมือ</label>
+                  <input type="text" class="form-control" id="receivedAt" readonly>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">ชื่อผู้รับเครื่องมือ</label>
+                  <input type="text" class="form-control" id="receiverName" placeholder="ชื่อผู้รับเครื่องมือ" required>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">หมายเหตุเพิ่มเติม</label>
+                  <input type="text" class="form-control" id="note" placeholder="หมายเหตุ เช่น ส่งก่อนวันผ่าตัด">
+                </div>
+              </div>
+
+              <hr class="my-4">
+
+              <div class="d-flex flex-column flex-md-row justify-content-between gap-2 mb-3">
+                <h3 class="h6 fw-bold mb-0 text-primary"><i class="bi bi-box-seam"></i> รายการชุดเครื่องมือ</h3>
+                <button type="button" class="btn btn-soft" id="addToolBtn">
+                  <i class="bi bi-plus-lg"></i> เพิ่มชุดเครื่องมือที่ 2
+                </button>
+              </div>
+
+              <div id="toolItemsContainer"></div>
+
+              <div class="d-grid d-md-flex gap-2 justify-content-end mt-4">
+                <button type="button" class="btn btn-soft" id="resetFormBtn"><i class="bi bi-arrow-clockwise"></i> ล้างฟอร์ม</button>
+                <button type="submit" class="btn btn-medical"><i class="bi bi-save2"></i> บันทึกข้อมูล</button>
+              </div>
+            </form>
+          </div>
+        </section>
+
+        <!-- DASHBOARD PAGE -->
+        <section id="dashboardPage" class="page-section">
+          <div class="stat-grid">
+            <div class="stat-card">
+              <div class="stat-icon"><i class="bi bi-inboxes"></i></div>
+              <div class="text-muted small">ทั้งหมด</div>
+              <h3 class="h4 fw-bold mb-0" id="statTotal">0</h3>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon"><i class="bi bi-shield-check"></i></div>
+              <div class="text-muted small">ต้องทำ Sterile</div>
+              <h3 class="h4 fw-bold mb-0" id="statSterile">0</h3>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon"><i class="bi bi-check-circle"></i></div>
+              <div class="text-muted small">พร้อมใช้งาน</div>
+              <h3 class="h4 fw-bold mb-0" id="statReady">0</h3>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon"><i class="bi bi-truck"></i></div>
+              <div class="text-muted small">ส่งคืนแล้ว</div>
+              <h3 class="h4 fw-bold mb-0" id="statReturned">0</h3>
+            </div>
+          </div>
+
+          <div class="glass-card">
+            <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 mb-3">
+              <h2 class="section-title mb-0"><i class="bi bi-grid-1x2"></i> Dashboard รายการรับเครื่องมือ</h2>
+              <div class="d-flex gap-2 flex-column flex-sm-row">
+                <input type="search" class="form-control" id="dashboardSearch" placeholder="ค้นหา บริษัท / เครื่องมือ / แพทย์">
+                <select class="form-select" id="statusFilter">
+                  <option value="">ทุกสถานะ</option>
+                  <option value="รับเครื่องมือแล้ว">รับเครื่องมือแล้ว</option>
+                  <option value="รอตรวจสอบ">รอตรวจสอบ</option>
+                  <option value="ส่ง Sterile">ส่ง Sterile</option>
+                  <option value="พร้อมใช้งาน">พร้อมใช้งาน</option>
+                  <option value="ส่งคืนบริษัท">ส่งคืนบริษัท</option>
+                </select>
+              </div>
+            </div>
+            <div class="row g-3" id="recordsContainer"></div>
+          </div>
+        </section>
+
+        <!-- TRACKING PAGE -->
+        <section id="trackingPage" class="page-section">
+          <div class="glass-card">
+            <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 mb-3">
+              <h2 class="section-title mb-0"><i class="bi bi-signpost-split"></i> ติดตามสถานะเครื่องมือ</h2>
+              <input type="search" class="form-control" id="trackingSearch" placeholder="ค้นหาด้วยบริษัท / ชื่อเครื่องมือ / วันที่ผ่าตัด">
+            </div>
+            <div id="trackingContainer"></div>
+          </div>
+        </section>
+
+        <!-- SETTING / SUPABASE READY PAGE -->
+        <section id="settingPage" class="page-section">
+          <div class="glass-card">
+            <h2 class="section-title"><i class="bi bi-cloud-upload"></i> เตรียมพร้อมเชื่อมต่อ Supabase / GitHub Pages</h2>
+            <div class="alert alert-primary rounded-4">
+              โค้ดนี้บันทึกข้อมูลด้วย <strong>localStorage</strong> ก่อน เพื่อให้ทดสอบบนเครื่องหรือ GitHub Pages ได้ทันที
+              และมีจุดเตรียมฟังก์ชันสำหรับต่อ Supabase ในอนาคต
+            </div>
+
+            <div class="row g-3">
+              <div class="col-lg-6">
+                <div class="p-3 bg-white rounded-4 border h-100">
+                  <h5 class="fw-bold text-primary"><i class="bi bi-database"></i> ตัวอย่างตาราง Supabase</h5>
+                  <pre class="small bg-light p-3 rounded-3 mb-0"><code>receiving_records
+- id uuid primary key
+- company_name text
+- surgeon_name text
+- surgery_date date
+- received_at timestamp
+- receiver_name text
+- note text
+- current_status text
+- tools jsonb
+- created_at timestamp</code></pre>
+                </div>
+              </div>
+              <div class="col-lg-6">
+                <div class="p-3 bg-white rounded-4 border h-100">
+                  <h5 class="fw-bold text-primary"><i class="bi bi-github"></i> การนำขึ้น GitHub Pages</h5>
+                  <ol class="mb-0 small">
+                    <li>สร้าง Repository ใหม่</li>
+                    <li>อัปโหลดไฟล์นี้ชื่อ <code>index.html</code></li>
+                    <li>ไปที่ Settings → Pages</li>
+                    <li>เลือก Branch เป็น <code>main</code> และ Folder เป็น <code>/root</code></li>
+                    <li>เปิด URL ที่ GitHub Pages สร้างให้</li>
+                  </ol>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <!-- =========================
+       BOTTOM NAVIGATION MOBILE
+  ========================== -->
+  <nav class="bottom-nav">
+    <button class="nav-btn active" data-page="formPage"><i class="bi bi-plus-circle"></i><span>รับ</span></button>
+    <button class="nav-btn" data-page="dashboardPage"><i class="bi bi-grid-1x2"></i><span>ข้อมูล</span></button>
+    <button class="nav-btn" data-page="trackingPage"><i class="bi bi-signpost-split"></i><span>ติดตาม</span></button>
+    <button class="nav-btn" data-page="settingPage"><i class="bi bi-cloud-upload"></i><span>ตั้งค่า</span></button>
+  </nav>
+
+  <!-- =========================
+       DETAIL MODAL
+  ========================== -->
+  <div class="modal fade" id="detailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content rounded-4 border-0">
+        <div class="modal-header text-white" style="background: linear-gradient(135deg, var(--primary), #1870b9);">
+          <h5 class="modal-title"><i class="bi bi-info-circle"></i> รายละเอียดเครื่องมือ</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" id="modalBody"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    /* =========================================================
+       CONFIG / MOCK STORAGE
+       หมายเหตุ: ปัจจุบันใช้ localStorage สำหรับทดสอบ
+       เมื่อต่อ Supabase ให้แทนที่ฟังก์ชัน saveRecords(), loadRecords()
+    ========================================================== */
+    const STORAGE_KEY = 'surgical_tool_receiving_records_v1';
+
+    const statusSteps = [
+      'รับเครื่องมือแล้ว',
+      'รอตรวจสอบ',
+      'ส่ง Sterile',
+      'พร้อมใช้งาน',
+      'ส่งคืนบริษัท'
+    ];
+
+    let records = [];
+    let toolItemCount = 0;
+
+    /* =========================================================
+       INIT
+    ========================================================== */
+    document.addEventListener('DOMContentLoaded', () => {
+      setTodayText();
+      setCurrentReceiveTime();
+      loadRecords();
+      addToolItem();
+      renderDashboard();
+      renderTracking();
+      bindEvents();
+    });
+
+    /* =========================================================
+       EVENT BINDING
+    ========================================================== */
+    function bindEvents() {
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.addEventListener('click', () => switchPage(btn.dataset.page));
+      });
+
+      document.getElementById('addToolBtn').addEventListener('click', addToolItem);
+      document.getElementById('resetFormBtn').addEventListener('click', resetForm);
+      document.getElementById('receiveForm').addEventListener('submit', handleSubmit);
+
+      document.getElementById('dashboardSearch').addEventListener('input', renderDashboard);
+      document.getElementById('statusFilter').addEventListener('change', renderDashboard);
+      document.getElementById('trackingSearch').addEventListener('input', renderTracking);
+    }
+
+    /* =========================================================
+       PAGE NAVIGATION
+    ========================================================== */
+    function switchPage(pageId) {
+      document.querySelectorAll('.page-section').forEach(section => {
+        section.classList.toggle('active', section.id === pageId);
+      });
+
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.page === pageId);
+      });
+
+      if (pageId === 'dashboardPage') renderDashboard();
+      if (pageId === 'trackingPage') renderTracking();
+    }
+
+    /* =========================================================
+       DATE HELPERS
+    ========================================================== */
+    function setTodayText() {
+      const today = new Date();
+      document.getElementById('todayText').textContent = formatDateThai(today);
+    }
+
+    function setCurrentReceiveTime() {
+      document.getElementById('receivedAt').value = formatDateTimeThai(new Date());
+    }
+
+    function formatDateThai(dateValue) {
+      if (!dateValue) return '-';
+      const date = new Date(dateValue);
+      return date.toLocaleDateString('th-TH', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    }
+
+    function formatDateTimeThai(dateValue) {
+      if (!dateValue) return '-';
+      const date = new Date(dateValue);
+      return date.toLocaleString('th-TH', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+
+    /* =========================================================
+       DYNAMIC TOOL ITEMS
+    ========================================================== */
+    function addToolItem() {
+      toolItemCount += 1;
+      const container = document.getElementById('toolItemsContainer');
+      const itemId = `toolItem_${Date.now()}_${toolItemCount}`;
+
+      const html = `
+        <div class="tool-item-card" data-tool-id="${itemId}">
+          <div class="tool-item-header">
+            <span class="tool-index">ชุดเครื่องมือที่ ${toolItemCount}</span>
+            ${toolItemCount > 1 ? `
+              <button type="button" class="btn btn-sm btn-outline-danger rounded-pill" onclick="removeToolItem('${itemId}')">
+                <i class="bi bi-trash"></i> ลบ
+              </button>
+            ` : ''}
+          </div>
+
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">ชื่อเครื่องมือผ่าตัด</label>
+              <input type="text" class="form-control tool-name" placeholder="เช่น Total Knee Set" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">ประเภทของเครื่องมือ</label>
+              <select class="form-select tool-type" required>
+                <option value="">เลือกประเภท</option>
+                <option value="Tray">Tray</option>
+                <option value="กล่อง">กล่อง</option>
+                <option value="ห่อผ้า">ห่อผ้า</option>
+                <option value="กล่องลัง">กล่องลัง</option>
+                <option value="เอกสาร">เอกสาร</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">สถานะเครื่องมือ</label>
+              <select class="form-select sterile-status" required>
+                <option value="ต้องทำ Sterile">ต้องทำ Sterile</option>
+                <option value="ไม่ต้องทำ Sterile">ไม่ต้องทำ Sterile</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">จำนวน</label>
+              <input type="number" class="form-control tool-quantity" min="1" value="1" required>
+            </div>
+            <div class="col-12">
+              <label class="form-label">อัปโหลดรูปเครื่องมือ</label>
+              <input type="file" class="form-control tool-images" accept="image/*" multiple>
+              <div class="image-preview-grid"></div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      container.insertAdjacentHTML('beforeend', html);
+
+      const newItem = container.querySelector(`[data-tool-id="${itemId}"]`);
+      const fileInput = newItem.querySelector('.tool-images');
+      fileInput.addEventListener('change', event => previewImages(event, newItem));
+    }
+
+    function removeToolItem(itemId) {
+      const item = document.querySelector(`[data-tool-id="${itemId}"]`);
+      if (item) item.remove();
+      refreshToolIndexes();
+    }
+
+    function refreshToolIndexes() {
+      const items = document.querySelectorAll('.tool-item-card');
+      items.forEach((item, index) => {
+        item.querySelector('.tool-index').textContent = `ชุดเครื่องมือที่ ${index + 1}`;
+      });
+      toolItemCount = items.length;
+    }
+
+    /* =========================================================
+       IMAGE PREVIEW
+    ========================================================== */
+    function previewImages(event, itemElement) {
+      const files = Array.from(event.target.files);
+      const previewGrid = itemElement.querySelector('.image-preview-grid');
+      previewGrid.innerHTML = '';
+
+      files.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = e => {
+          const img = document.createElement('img');
+          img.src = e.target.result;
+          img.className = 'image-preview';
+          previewGrid.appendChild(img);
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function readFilesAsBase64(fileInput) {
+      const files = Array.from(fileInput.files || []);
+      return Promise.all(files.map(file => {
+        return new Promise(resolve => {
+          const reader = new FileReader();
+          reader.onload = e => resolve(e.target.result);
+          reader.readAsDataURL(file);
+        });
+      }));
+    }
+
+    /* =========================================================
+       FORM SUBMIT
+    ========================================================== */
+    async function handleSubmit(event) {
+      event.preventDefault();
+
+      const toolCards = Array.from(document.querySelectorAll('.tool-item-card'));
+      const tools = [];
+
+      for (const card of toolCards) {
+        const images = await readFilesAsBase64(card.querySelector('.tool-images'));
+        tools.push({
+          id: crypto.randomUUID(),
+          toolName: card.querySelector('.tool-name').value.trim(),
+          toolType: card.querySelector('.tool-type').value,
+          sterileStatus: card.querySelector('.sterile-status').value,
+          quantity: Number(card.querySelector('.tool-quantity').value || 1),
+          images
+        });
+      }
+
+      const record = {
+        id: crypto.randomUUID(),
+        companyName: document.getElementById('companyName').value.trim(),
+        surgeonName: document.getElementById('surgeonName').value.trim(),
+        surgeryDate: document.getElementById('surgeryDate').value,
+        receivedAt: new Date().toISOString(),
+        receiverName: document.getElementById('receiverName').value.trim(),
+        note: document.getElementById('note').value.trim(),
+        currentStatus: 'รับเครื่องมือแล้ว',
+        tools,
+        createdAt: new Date().toISOString()
+      };
+
+      records.unshift(record);
+      saveRecords();
+      resetForm();
+      renderDashboard();
+      renderTracking();
+      switchPage('dashboardPage');
+      showToast('บันทึกข้อมูลสำเร็จ', 'success');
+
+      // TODO: เมื่อต่อ Supabase ให้เรียก await saveRecordToSupabase(record)
+    }
+
+    function resetForm() {
+      document.getElementById('receiveForm').reset();
+      document.getElementById('toolItemsContainer').innerHTML = '';
+      toolItemCount = 0;
+      setCurrentReceiveTime();
+      addToolItem();
+    }
+
+    /* =========================================================
+       LOCAL STORAGE
+    ========================================================== */
+    function saveRecords() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+    }
+
+    function loadRecords() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      records = saved ? JSON.parse(saved) : [];
+    }
+
+    /* =========================================================
+       DASHBOARD RENDER
+    ========================================================== */
+    function renderDashboard() {
+      const container = document.getElementById('recordsContainer');
+      const search = (document.getElementById('dashboardSearch')?.value || '').toLowerCase();
+      const statusFilter = document.getElementById('statusFilter')?.value || '';
+
+      const filtered = getFilteredRecords(search, statusFilter);
+
+      updateStats();
+
+      if (!filtered.length) {
+        container.innerHTML = `
+          <div class="col-12">
+            <div class="empty-state">
+              <i class="bi bi-inbox"></i>
+              <h5>ยังไม่มีข้อมูล</h5>
+              <p>เริ่มจากการบันทึกรายการรับเครื่องมือ</p>
+            </div>
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = filtered.map(record => {
+        const firstTool = record.tools[0] || {};
+        const firstImage = firstTool.images?.[0] || '';
+        return `
+          <div class="col-md-6 col-xl-4">
+            <div class="record-card">
+              ${firstImage ? `<img src="${firstImage}" class="record-image" alt="รูปเครื่องมือ">` : `<div class="record-image d-flex align-items-center justify-content-center text-muted"><i class="bi bi-image fs-1"></i></div>`}
+              <div class="d-flex justify-content-between gap-2 mb-2">
+                <strong class="text-primary">${escapeHtml(record.companyName)}</strong>
+                ${getStatusBadge(record.currentStatus)}
+              </div>
+              <h5 class="fw-bold mb-1">${escapeHtml(firstTool.toolName || '-')}</h5>
+              <div class="small text-muted mb-2">รวม ${record.tools.length} ชุดเครื่องมือ</div>
+              <div class="small mb-1"><i class="bi bi-calendar-event"></i> ผ่าตัด: ${formatDateThai(record.surgeryDate)}</div>
+              <div class="small mb-1"><i class="bi bi-clock"></i> รับ: ${formatDateTimeThai(record.receivedAt)}</div>
+              <div class="small mb-3"><i class="bi bi-person-check"></i> ผู้รับ: ${escapeHtml(record.receiverName)}</div>
+
+              <div class="d-grid gap-2">
+                <button class="btn btn-medical btn-sm" onclick="openDetailModal('${record.id}')">
+                  <i class="bi bi-eye"></i> ดูรายละเอียด
+                </button>
+                <select class="form-select form-select-sm" onchange="updateRecordStatus('${record.id}', this.value)">
+                  ${statusSteps.map(step => `<option value="${step}" ${record.currentStatus === step ? 'selected' : ''}>${step}</option>`).join('')}
+                </select>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function getFilteredRecords(search, statusFilter = '') {
+      return records
+        .filter(record => {
+          const text = [
+            record.companyName,
+            record.surgeonName,
+            record.receiverName,
+            record.surgeryDate,
+            ...record.tools.map(tool => tool.toolName)
+          ].join(' ').toLowerCase();
+
+          const matchSearch = !search || text.includes(search);
+          const matchStatus = !statusFilter || record.currentStatus === statusFilter;
+          return matchSearch && matchStatus;
+        })
+        .sort((a, b) => new Date(b.receivedAt) - new Date(a.receivedAt));
+    }
+
+    function updateStats() {
+      const total = records.length;
+      const sterile = records.filter(r => r.tools.some(t => t.sterileStatus === 'ต้องทำ Sterile')).length;
+      const ready = records.filter(r => r.currentStatus === 'พร้อมใช้งาน').length;
+      const returned = records.filter(r => r.currentStatus === 'ส่งคืนบริษัท').length;
+
+      document.getElementById('statTotal').textContent = total;
+      document.getElementById('statSterile').textContent = sterile;
+      document.getElementById('statReady').textContent = ready;
+      document.getElementById('statReturned').textContent = returned;
+      document.getElementById('headerTotal').textContent = `${total} รายการ`;
+    }
+
+    /* =========================================================
+       DETAIL MODAL
+    ========================================================== */
+    function openDetailModal(recordId) {
+      const record = records.find(r => r.id === recordId);
+      if (!record) return;
+
+      const toolsHtml = record.tools.map((tool, index) => `
+        <div class="border rounded-4 p-3 mb-3 bg-light">
+          <div class="d-flex justify-content-between gap-2 mb-2">
+            <h6 class="fw-bold text-primary mb-0">ชุดที่ ${index + 1}: ${escapeHtml(tool.toolName)}</h6>
+            <span class="badge bg-secondary rounded-pill">${escapeHtml(tool.toolType)}</span>
+          </div>
+          <div class="row small mb-2">
+            <div class="col-md-6"><strong>สถานะ Sterile:</strong> ${escapeHtml(tool.sterileStatus)}</div>
+            <div class="col-md-6"><strong>จำนวน:</strong> ${tool.quantity}</div>
+          </div>
+          <div class="image-preview-grid">
+            ${(tool.images || []).map(img => `<img src="${img}" class="image-preview" alt="รูปเครื่องมือ">`).join('') || '<span class="text-muted small">ไม่มีรูปภาพ</span>'}
+          </div>
+        </div>
+      `).join('');
+
+      document.getElementById('modalBody').innerHTML = `
+        <div class="row g-3 mb-3">
+          <div class="col-md-6"><strong>บริษัท:</strong><br>${escapeHtml(record.companyName)}</div>
+          <div class="col-md-6"><strong>แพทย์ผ่าตัด:</strong><br>${escapeHtml(record.surgeonName)}</div>
+          <div class="col-md-6"><strong>วันที่ผ่าตัด:</strong><br>${formatDateThai(record.surgeryDate)}</div>
+          <div class="col-md-6"><strong>วันที่รับ:</strong><br>${formatDateTimeThai(record.receivedAt)}</div>
+          <div class="col-md-6"><strong>ผู้รับ:</strong><br>${escapeHtml(record.receiverName)}</div>
+          <div class="col-md-6"><strong>สถานะปัจจุบัน:</strong><br>${getStatusBadge(record.currentStatus)}</div>
+          <div class="col-12"><strong>หมายเหตุ:</strong><br>${escapeHtml(record.note || '-')}</div>
+        </div>
+        <hr>
+        <h6 class="fw-bold text-primary mb-3"><i class="bi bi-box-seam"></i> รายการเครื่องมือทั้งหมด</h6>
+        ${toolsHtml}
+      `;
+
+      const modal = new bootstrap.Modal(document.getElementById('detailModal'));
+      modal.show();
+    }
+
+    /* =========================================================
+       TRACKING RENDER
+    ========================================================== */
+    function renderTracking() {
+      const container = document.getElementById('trackingContainer');
+      const search = (document.getElementById('trackingSearch')?.value || '').toLowerCase();
+      const filtered = getFilteredRecords(search);
+
+      if (!filtered.length) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <i class="bi bi-signpost"></i>
+            <h5>ไม่พบข้อมูลติดตาม</h5>
+            <p>ลองค้นหาด้วยชื่อบริษัท ชื่อเครื่องมือ หรือวันที่ผ่าตัด</p>
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = filtered.map(record => {
+        const activeIndex = statusSteps.indexOf(record.currentStatus);
+        const toolNames = record.tools.map(t => t.toolName).join(', ');
+
+        return `
+          <div class="tracking-card">
+            <div class="d-flex flex-column flex-lg-row justify-content-between gap-2">
+              <div>
+                <h5 class="fw-bold text-primary mb-1">${escapeHtml(record.companyName)}</h5>
+                <div class="text-muted small">${escapeHtml(toolNames)}</div>
+                <div class="small mt-1"><i class="bi bi-calendar-event"></i> วันที่ผ่าตัด ${formatDateThai(record.surgeryDate)}</div>
+              </div>
+              <div class="d-flex flex-column gap-2 align-items-start align-items-lg-end">
+                ${getStatusBadge(record.currentStatus)}
+                <select class="form-select form-select-sm" onchange="updateRecordStatus('${record.id}', this.value)">
+                  ${statusSteps.map(step => `<option value="${step}" ${record.currentStatus === step ? 'selected' : ''}>${step}</option>`).join('')}
+                </select>
+              </div>
+            </div>
+
+            <div class="stepper">
+              ${statusSteps.map((step, index) => `
+                <div class="step ${index <= activeIndex ? 'active' : ''}">
+                  <div class="step-icon">${index + 1}</div>
+                  <div>${step}</div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    /* =========================================================
+       STATUS UPDATE
+    ========================================================== */
+    function updateRecordStatus(recordId, newStatus) {
+      const record = records.find(r => r.id === recordId);
+      if (!record) return;
+
+      record.currentStatus = newStatus;
+      saveRecords();
+      renderDashboard();
+      renderTracking();
+      showToast('อัปเดตสถานะสำเร็จ', 'success');
+
+      // TODO: เมื่อต่อ Supabase ให้เรียก await updateStatusInSupabase(recordId, newStatus)
+    }
+
+    function getStatusBadge(status) {
+      const classMap = {
+        'รับเครื่องมือแล้ว': 'badge-received',
+        'รอตรวจสอบ': 'badge-check',
+        'ส่ง Sterile': 'badge-sterile',
+        'พร้อมใช้งาน': 'badge-ready',
+        'ส่งคืนบริษัท': 'badge-returned'
+      };
+      return `<span class="badge-status ${classMap[status] || 'badge-received'}">${escapeHtml(status)}</span>`;
+    }
+
+    /* =========================================================
+       TOAST NOTIFICATION
+    ========================================================== */
+    function showToast(message, type = 'success') {
+      const toast = document.createElement('div');
+      toast.className = 'position-fixed top-0 end-0 m-3 p-3 rounded-4 text-white shadow';
+      toast.style.zIndex = 2000;
+      toast.style.background = type === 'success' ? '#198754' : '#dc3545';
+      toast.innerHTML = `<i class="bi bi-check-circle"></i> ${message}`;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 2200);
+    }
+
+    /* =========================================================
+       SECURITY HELPER
+    ========================================================== */
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+    }
+
+    /* =========================================================
+       SUPABASE READY FUNCTIONS
+       เปิดใช้เมื่อติดตั้ง @supabase/supabase-js แล้ว
+    ========================================================== */
+    async function saveRecordToSupabase(record) {
+      // ตัวอย่างแนวทางเชื่อมต่อ Supabase
+      // const { data, error } = await supabase
+      //   .from('receiving_records')
+      //   .insert([{
+      //     id: record.id,
+      //     company_name: record.companyName,
+      //     surgeon_name: record.surgeonName,
+      //     surgery_date: record.surgeryDate,
+      //     received_at: record.receivedAt,
+      //     receiver_name: record.receiverName,
+      //     note: record.note,
+      //     current_status: record.currentStatus,
+      //     tools: record.tools
+      //   }]);
+      // if (error) throw error;
+      // return data;
+    }
+
+    async function updateStatusInSupabase(recordId, newStatus) {
+      // const { data, error } = await supabase
+      //   .from('receiving_records')
+      //   .update({ current_status: newStatus })
+      //   .eq('id', recordId);
+      // if (error) throw error;
+      // return data;
+    }
+  </script>
+</body>
+</html>
