@@ -697,6 +697,13 @@
             <div class="alert alert-primary rounded-4">
               โค้ดนี้ใช้ <strong>Supabase Database</strong> สำหรับข้อมูล และ <strong>Supabase Storage bucket: tool-images</strong> สำหรับรูปภาพ โดยมี localStorage เป็นข้อมูลสำรองเมื่อเชื่อมต่อไม่ได้
             </div>
+            <div class="alert alert-warning rounded-4">
+              <strong>สำคัญ:</strong> ถ้าอัปโหลดรูปแล้วขึ้น 403 / RLS / bucket not found ให้สร้าง bucket <code>tool-images</code> เป็น Public และรัน SQL Policy ด้านล่างใน Supabase SQL Editor ก่อนใช้งานจริง
+            </div>
+            <div class="d-grid d-md-flex gap-2 mb-3">
+              <button type="button" class="btn btn-medical" id="testStorageBtn"><i class="bi bi-cloud-check"></i> ทดสอบ Storage</button>
+              <span class="align-self-center small text-muted" id="storageTestResult">ยังไม่ได้ทดสอบ</span>
+            </div>
 
             <div class="row g-3">
               <div class="col-lg-6">
@@ -716,6 +723,38 @@
 
 Storage bucket
 - tool-images public bucket</code></pre>
+                  <h6 class="fw-bold text-primary mt-3"><i class="bi bi-shield-lock"></i> SQL Policy สำหรับ Storage</h6>
+                  <pre class="small bg-light p-3 rounded-3 mb-0"><code>-- 1) สร้าง bucket ให้เป็น public ก่อน หรือรันคำสั่งนี้
+insert into storage.buckets (id, name, public)
+values ('tool-images', 'tool-images', true)
+on conflict (id) do update set public = true;
+
+-- 2) อนุญาตให้ browser ที่ใช้ anon key อัปโหลด/อ่าน/ลบรูปใน bucket นี้
+drop policy if exists "tool_images_select" on storage.objects;
+drop policy if exists "tool_images_insert" on storage.objects;
+drop policy if exists "tool_images_update" on storage.objects;
+drop policy if exists "tool_images_delete" on storage.objects;
+
+create policy "tool_images_select"
+on storage.objects for select
+to anon, authenticated
+using (bucket_id = 'tool-images');
+
+create policy "tool_images_insert"
+on storage.objects for insert
+to anon, authenticated
+with check (bucket_id = 'tool-images');
+
+create policy "tool_images_update"
+on storage.objects for update
+to anon, authenticated
+using (bucket_id = 'tool-images')
+with check (bucket_id = 'tool-images');
+
+create policy "tool_images_delete"
+on storage.objects for delete
+to anon, authenticated
+using (bucket_id = 'tool-images');</code></pre>
                 </div>
               </div>
               <div class="col-lg-6">
@@ -825,6 +864,7 @@ Storage bucket
       document.getElementById('dashboardSearch').addEventListener('input', renderDashboard);
       document.getElementById('statusFilter').addEventListener('change', renderDashboard);
       document.getElementById('trackingSearch').addEventListener('input', renderTracking);
+      document.getElementById('testStorageBtn')?.addEventListener('click', testSupabaseStorage);
     }
 
     /* =========================================================
@@ -1100,28 +1140,36 @@ Storage bucket
 
       const folderDate = record.surgeryDate || new Date().toISOString().slice(0, 10);
       const folderCompany = slugify(record.companyName);
-      const folderRecord = record.id;
+      const folderRecord = slugify(record.id);
       const folderTool = `${String(toolIndex + 1).padStart(2, '0')}-${slugify(tool.toolName)}`;
       const urls = [];
 
       for (const file of files) {
         const compressedFile = await compressImage(file);
-        const fileName = `${Date.now()}-${safeUUID()}-${slugify(file.name.replace(/\.[^.]+$/, ''))}.jpg`;
+        const fileBaseName = slugify(file.name.replace(/\.[^.]+$/, ''));
+        const fileName = `${Date.now()}-${safeUUID()}-${fileBaseName}.jpg`;
         const path = `${folderDate}/${folderCompany}/${folderRecord}/${folderTool}/${fileName}`;
 
-        const { error } = await supabaseClient.storage
+        const { data: uploadData, error } = await supabaseClient.storage
           .from(STORAGE_BUCKET)
           .upload(path, compressedFile, {
             cacheControl: '3600',
-            upsert: false,
+            upsert: true,
             contentType: 'image/jpeg'
           });
 
-        if (error) throw error;
+        if (error) {
+          throw formatSupabaseStorageError(error);
+        }
 
+        const uploadedPath = uploadData?.path || path;
         const { data } = supabaseClient.storage
           .from(STORAGE_BUCKET)
-          .getPublicUrl(path);
+          .getPublicUrl(uploadedPath);
+
+        if (!data?.publicUrl) {
+          throw new Error('อัปโหลดสำเร็จแต่สร้าง Public URL ไม่ได้ กรุณาตรวจสอบว่า bucket เป็น Public');
+        }
 
         urls.push(data.publicUrl);
         progressState.done += 1;
@@ -1129,6 +1177,58 @@ Storage bucket
       }
 
       return urls;
+    }
+
+    function formatSupabaseStorageError(error) {
+      const rawMessage = error?.message || String(error || 'Unknown error');
+      const status = error?.statusCode || error?.status || '';
+      const message = rawMessage.toLowerCase();
+
+      if (status === 404 || message.includes('bucket not found') || message.includes('not found')) {
+        return new Error(`ไม่พบ Storage bucket ชื่อ "${STORAGE_BUCKET}" กรุณาสร้าง bucket นี้ใน Supabase และตั้งเป็น Public`);
+      }
+
+      if (status === 401 || status === 403 || message.includes('row-level security') || message.includes('rls') || message.includes('permission') || message.includes('unauthorized')) {
+        return new Error(`Supabase Storage ปฏิเสธการอัปโหลด (${status || 'permission error'}): กรุณารัน SQL Policy ในหน้า Supabase Ready เพื่ออนุญาต INSERT/SELECT/DELETE ของ bucket "${STORAGE_BUCKET}"`);
+      }
+
+      if (message.includes('invalid key')) {
+        return new Error('ชื่อไฟล์หรือ path ไม่ถูกต้อง ระบบปรับชื่อไฟล์เป็นอังกฤษแล้ว กรุณาลองใหม่อีกครั้ง');
+      }
+
+      return new Error(`อัปโหลดรูปไป Supabase Storage ไม่สำเร็จ: ${rawMessage}`);
+    }
+
+    async function testSupabaseStorage() {
+      const resultEl = document.getElementById('storageTestResult');
+      const btn = document.getElementById('testStorageBtn');
+      if (btn) btn.disabled = true;
+      if (resultEl) resultEl.textContent = 'กำลังทดสอบ Storage...';
+
+      try {
+        if (!supabaseClient) throw new Error('ไม่พบ Supabase SDK');
+
+        const testPath = `_healthcheck/${Date.now()}-${safeUUID()}.txt`;
+        const testFile = new Blob(['storage ok'], { type: 'text/plain' });
+
+        const { error: uploadError } = await supabaseClient.storage
+          .from(STORAGE_BUCKET)
+          .upload(testPath, testFile, { upsert: true, contentType: 'text/plain' });
+
+        if (uploadError) throw formatSupabaseStorageError(uploadError);
+
+        const { data } = supabaseClient.storage.from(STORAGE_BUCKET).getPublicUrl(testPath);
+        await supabaseClient.storage.from(STORAGE_BUCKET).remove([testPath]);
+
+        if (resultEl) resultEl.textContent = `Storage พร้อมใช้งาน: ${data?.publicUrl ? 'สร้าง Public URL ได้' : 'อัปโหลดได้ แต่ Public URL ว่าง'}`;
+        showToast('ทดสอบ Storage สำเร็จ', 'success');
+      } catch (error) {
+        console.error('ทดสอบ Storage ไม่สำเร็จ:', error);
+        if (resultEl) resultEl.textContent = error.message || 'ทดสอบ Storage ไม่สำเร็จ';
+        showToast(error.message || 'ทดสอบ Storage ไม่สำเร็จ', 'error');
+      } finally {
+        if (btn) btn.disabled = false;
+      }
     }
 
     async function deleteImagesFromStorage(imageUrls = []) {
