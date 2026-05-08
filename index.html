@@ -1003,12 +1003,18 @@ Storage bucket
     }
 
     function slugify(value) {
-      return String(value || 'unknown')
-        .trim()
-        .replace(/[\\/:*?"<>|#%{}^~\[\]`;&=+]/g, '-')
-        .replace(/\s+/g, '-')
+      // Supabase Storage object key ควรใช้เฉพาะตัวอักษร/ตัวเลขอังกฤษ, ขีดกลาง และ underscore
+      // เพื่อป้องกัน error: StorageApiError: Invalid key จากภาษาไทย ช่องว่าง และอักขระพิเศษ
+      const text = String(value || 'unknown')
+        .normalize('NFKD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9._-]+/g, '-')
+        .replace(/\.+/g, '.')
         .replace(/-+/g, '-')
-        .slice(0, 80) || 'unknown';
+        .replace(/^[-.]+|[-.]+$/g, '')
+        .slice(0, 60);
+
+      return text || 'unknown';
     }
 
     function getStoragePathFromPublicUrl(url) {
