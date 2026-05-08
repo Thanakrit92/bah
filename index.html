@@ -719,10 +719,16 @@
     </div>
   </div>
 
+  
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <!-- Bootstrap JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
   <script>
+
+    const SUPABASE_URL = 'https://ncctdcdlljjxblunwhor.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5jY3RkY2RsbGpqeGJsdW53aG9yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyMTI1MzMsImV4cCI6MjA5Mzc4ODUzM30.K7in1PsAqoeHsK8MRwpJsXUSE4Izm6j-y_bTQY6rGUI';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     /* =========================================================
        CONFIG / MOCK STORAGE
        หมายเหตุ: ปัจจุบันใช้ localStorage สำหรับทดสอบ
@@ -744,10 +750,10 @@
     /* =========================================================
        INIT
     ========================================================== */
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
       setTodayText();
       setCurrentReceiveTime();
-      loadRecords();
+      await loadRecordsFromSupabase();
       addToolItem();
       renderDashboard();
       renderTracking();
@@ -933,42 +939,57 @@
     ========================================================== */
     async function handleSubmit(event) {
       event.preventDefault();
-
-      const toolCards = Array.from(document.querySelectorAll('.tool-item-card'));
-      const tools = [];
-
-      for (const card of toolCards) {
-        const images = await readFilesAsBase64(card.querySelector('.tool-images'));
-        tools.push({
+    
+      try {
+        const toolCards = Array.from(document.querySelectorAll('.tool-item-card'));
+        const tools = [];
+    
+        for (const card of toolCards) {
+          const images = await readFilesAsBase64(card.querySelector('.tool-images'));
+    
+          tools.push({
+            id: crypto.randomUUID(),
+            toolName: card.querySelector('.tool-name').value.trim(),
+            toolType: card.querySelector('.tool-type').value,
+            sterileStatus: card.querySelector('.sterile-status').value,
+            quantity: Number(card.querySelector('.tool-quantity').value || 1),
+            images
+          });
+        }
+    
+        const record = {
           id: crypto.randomUUID(),
-          toolName: card.querySelector('.tool-name').value.trim(),
-          toolType: card.querySelector('.tool-type').value,
-          sterileStatus: card.querySelector('.sterile-status').value,
-          quantity: Number(card.querySelector('.tool-quantity').value || 1),
-          images
-        });
+          companyName: document.getElementById('companyName').value.trim(),
+          surgeonName: document.getElementById('surgeonName').value.trim(),
+          surgeryDate: document.getElementById('surgeryDate').value,
+          receivedAt: new Date().toISOString(),
+          receiverName: document.getElementById('receiverName').value.trim(),
+          note: document.getElementById('note').value.trim(),
+          currentStatus: 'รับเครื่องมือแล้ว',
+          tools,
+          createdAt: new Date().toISOString()
+        };
+    
+        // บันทึกไป Supabase ก่อน
+        await saveRecordToSupabase(record);
+    
+        // ถ้าบันทึกสำเร็จ ค่อยเพิ่มเข้า records หน้าเว็บ
+        records.unshift(record);
+    
+        // จะเก็บ localStorage สำรองไว้ก็ได้
+        saveRecords();
+    
+        resetForm();
+        renderDashboard();
+        renderTracking();
+        switchPage('dashboardPage');
+        showToast('บันทึกข้อมูลสำเร็จ', 'success');
+    
+      } catch (error) {
+        console.error('บันทึกข้อมูลผิดพลาด:', error);
+        showToast('บันทึกข้อมูลไม่สำเร็จ กรุณาตรวจสอบ Supabase', 'error');
       }
-
-      const record = {
-        id: crypto.randomUUID(),
-        companyName: document.getElementById('companyName').value.trim(),
-        surgeonName: document.getElementById('surgeonName').value.trim(),
-        surgeryDate: document.getElementById('surgeryDate').value,
-        receivedAt: new Date().toISOString(),
-        receiverName: document.getElementById('receiverName').value.trim(),
-        note: document.getElementById('note').value.trim(),
-        currentStatus: 'รับเครื่องมือแล้ว',
-        tools,
-        createdAt: new Date().toISOString()
-      };
-
-      records.unshift(record);
-      saveRecords();
-      resetForm();
-      renderDashboard();
-      renderTracking();
-      switchPage('dashboardPage');
-      showToast('บันทึกข้อมูลสำเร็จ', 'success');
+    }
 
       // TODO: เมื่อต่อ Supabase ให้เรียก await saveRecordToSupabase(record)
     }
@@ -981,17 +1002,6 @@
       addToolItem();
     }
 
-    /* =========================================================
-       LOCAL STORAGE
-    ========================================================== */
-    function saveRecords() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
-    }
-
-    function loadRecords() {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      records = saved ? JSON.parse(saved) : [];
-    }
 
     /* =========================================================
        DASHBOARD RENDER
@@ -1229,31 +1239,32 @@
        เปิดใช้เมื่อติดตั้ง @supabase/supabase-js แล้ว
     ========================================================== */
     async function saveRecordToSupabase(record) {
-      // ตัวอย่างแนวทางเชื่อมต่อ Supabase
-      // const { data, error } = await supabase
-      //   .from('receiving_records')
-      //   .insert([{
-      //     id: record.id,
-      //     company_name: record.companyName,
-      //     surgeon_name: record.surgeonName,
-      //     surgery_date: record.surgeryDate,
-      //     received_at: record.receivedAt,
-      //     receiver_name: record.receiverName,
-      //     note: record.note,
-      //     current_status: record.currentStatus,
-      //     tools: record.tools
-      //   }]);
-      // if (error) throw error;
-      // return data;
+      const { data, error } = await supabaseClient
+        .from('receiving_records')
+        .insert([{
+          id: record.id,
+          company_name: record.companyName,
+          surgeon_name: record.surgeonName,
+          surgery_date: record.surgeryDate,
+          received_at: record.receivedAt,
+          receiver_name: record.receiverName,
+          note: record.note,
+          current_status: record.currentStatus,
+          tools: record.tools
+        }])
+        .select();
+    
+      if (error) throw error;
+      return data;
     }
 
     async function updateStatusInSupabase(recordId, newStatus) {
-      // const { data, error } = await supabase
-      //   .from('receiving_records')
-      //   .update({ current_status: newStatus })
-      //   .eq('id', recordId);
-      // if (error) throw error;
-      // return data;
+       const { data, error } = await supabase
+         .from('receiving_records')
+         .update({ current_status: newStatus })
+         .eq('id', recordId);
+       if (error) throw error;
+       return data;
     }
   </script>
 </body>
