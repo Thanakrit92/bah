@@ -306,17 +306,36 @@
     .image-preview-grid {
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 10px;
+      justify-content: center;
+      align-items: center;
+      gap: 18px;
+      margin-top: 18px;
+      padding: 12px;
+      background: #f8fbff;
+      border-radius: 22px;
+      border: 1px dashed #d7e3ef;
     }
 
     .image-preview {
-      width: 78px;
-      height: 78px;
+      width: 180px;
+      height: 180px;
       object-fit: cover;
-      border-radius: 16px;
-      border: 1px solid var(--border);
-      box-shadow: 0 8px 18px rgba(0,0,0,0.08);
+      border-radius: 26px;
+      border: 3px solid #ffffff;
+      box-shadow: 0 14px 34px rgba(0,0,0,0.16);
+      background: #f8fbff;
+      transition: 0.25s ease;
+    }
+
+    .image-preview:hover {
+      transform: scale(1.05);
+    }
+
+    @media (max-width: 576px) {
+      .image-preview {
+        width: 150px;
+        height: 150px;
+      }
     }
 
     .image-thumb-wrap {
@@ -554,6 +573,54 @@
       font-weight: 600;
     }
 
+
+    /* =========================
+       SAFER FORM ACTION BUTTONS
+    ========================== */
+    .form-action-area {
+      border-top: 1px solid var(--border);
+      padding-top: 18px;
+    }
+
+    .btn-reset-safe {
+      background: #fff;
+      color: var(--danger);
+      border: 1px solid rgba(220, 53, 69, 0.35);
+      border-radius: 16px;
+      padding: 12px 18px;
+      font-weight: 600;
+      box-shadow: none;
+    }
+
+    .btn-reset-safe:hover {
+      background: #fff5f5;
+      color: var(--danger);
+      border-color: rgba(220, 53, 69, 0.65);
+    }
+
+    @media (max-width: 576px) {
+      .form-action-area {
+        display: flex !important;
+        flex-direction: column-reverse;
+        gap: 14px !important;
+      }
+
+      .form-action-area .btn-medical {
+        width: 100%;
+        padding: 16px 18px;
+        font-size: 17px;
+        border-radius: 20px;
+      }
+
+      .form-action-area .btn-reset-safe {
+        width: 100%;
+        padding: 11px 18px;
+        font-size: 14px;
+        opacity: 0.82;
+        border-style: dashed;
+      }
+    }
+
     /* =========================
        RESPONSIVE
     ========================== */
@@ -626,6 +693,10 @@
             <strong id="todayText">-</strong>
           </div>
           <div class="header-stat">
+            <div class="small opacity-75">เวลาปัจจุบัน</div>
+            <strong id="currentTimeText">-</strong>
+          </div>
+          <div class="header-stat">
             <div class="small opacity-75">จำนวนรายการ</div>
             <strong id="headerTotal">0 รายการ</strong>
           </div>
@@ -662,10 +733,6 @@
                 <div class="col-md-6">
                   <label class="form-label">แพทย์ผ่าตัด</label>
                   <input type="text" class="form-control" id="surgeonName" placeholder="ชื่อแพทย์ผ่าตัด" required>
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label">วันที่และเวลารับเครื่องมือ</label>
-                  <input type="text" class="form-control" id="receivedAt" readonly>
                 </div>
               </div>
 
@@ -707,9 +774,13 @@
                 </div>
               </div>
 
-              <div class="d-grid d-md-flex gap-2 justify-content-end mt-4">
-                <button type="button" class="btn btn-soft" id="resetFormBtn"><i class="bi bi-arrow-clockwise"></i> ล้างฟอร์ม</button>
-                <button type="submit" class="btn btn-medical"><i class="bi bi-save2"></i> บันทึกข้อมูล</button>
+              <div class="form-action-area d-grid d-md-flex gap-3 justify-content-end mt-4">
+                <button type="button" class="btn btn-reset-safe" id="resetFormBtn">
+                  <i class="bi bi-trash3"></i> ล้างฟอร์ม
+                </button>
+                <button type="submit" class="btn btn-medical">
+                  <i class="bi bi-save2"></i> บันทึกข้อมูล
+                </button>
               </div>
             </form>
           </div>
@@ -924,6 +995,7 @@ using (bucket_id = 'tool-images');</code></pre>
 
     document.addEventListener('DOMContentLoaded', async () => {
       setTodayText();
+      setInterval(setTodayText, 1000);
       setCurrentReceiveTime();
       addToolItem();
       bindEvents();
@@ -935,7 +1007,7 @@ using (bucket_id = 'tool-images');</code></pre>
     function bindEvents() {
       document.querySelectorAll('.nav-btn').forEach(btn => btn.addEventListener('click', () => switchPage(btn.dataset.page)));
       document.getElementById('addToolBtn').addEventListener('click', addToolItem);
-      document.getElementById('resetFormBtn').addEventListener('click', resetForm);
+      document.getElementById('resetFormBtn').addEventListener('click', confirmResetForm);
       document.getElementById('receiveForm').addEventListener('submit', handleSubmit);
       document.getElementById('dashboardSearch').addEventListener('input', renderDashboard);
       document.getElementById('statusFilter').addEventListener('change', renderDashboard);
@@ -957,8 +1029,24 @@ using (bucket_id = 'tool-images');</code></pre>
       if (pageId === 'trackingPage') renderTracking();
     }
 
-    function setTodayText() { document.getElementById('todayText').textContent = formatDateThai(new Date()); }
-    function setCurrentReceiveTime() { document.getElementById('receivedAt').value = formatDateTimeThai(new Date()); }
+    function setTodayText() {
+      const now = new Date();
+      const todayEl = document.getElementById('todayText');
+      const timeEl = document.getElementById('currentTimeText');
+      if (todayEl) todayEl.textContent = formatDateThai(now);
+      if (timeEl) {
+        timeEl.textContent = now.toLocaleTimeString('th-TH', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        });
+      }
+    }
+
+    function setCurrentReceiveTime() {
+      const receivedAtInput = document.getElementById('receivedAt');
+      if (receivedAtInput) receivedAtInput.value = formatDateTimeThai(new Date());
+    }
 
     function formatDateThai(dateValue) {
       if (!dateValue) return '-';
@@ -1207,6 +1295,28 @@ using (bucket_id = 'tool-images');</code></pre>
       const submitBtn = document.querySelector('#receiveForm button[type="submit"]'), resetBtn = document.getElementById('resetFormBtn'), addBtn = document.getElementById('addToolBtn');
       if (submitBtn) { submitBtn.disabled = isLoading; submitBtn.innerHTML = isLoading ? '<span class="spinner-border spinner-border-sm me-1"></span> กำลังบันทึก...' : '<i class="bi bi-save2"></i> บันทึกข้อมูล'; }
       if (resetBtn) resetBtn.disabled = isLoading; if (addBtn) addBtn.disabled = isLoading;
+    }
+
+    function confirmResetForm() {
+      const hasData = Boolean(
+        document.getElementById('companyName')?.value.trim() ||
+        document.getElementById('surgeonName')?.value.trim() ||
+        document.getElementById('note')?.value.trim() ||
+        document.getElementById('receiverName')?.value.trim() ||
+        Array.from(document.querySelectorAll('.tool-item-card')).some(card =>
+          card.querySelector('.tool-name')?.value.trim() ||
+          card.querySelector('.tool-surgery-date')?.value ||
+          (card.querySelector('.tool-images')?.files?.length || 0) > 0
+        )
+      );
+
+      if (!hasData) {
+        resetForm();
+        return;
+      }
+
+      const ok = confirm('ยืนยันล้างฟอร์มหรือไม่? ข้อมูลที่กรอกไว้และรูปที่เลือกจะถูกลบออกจากหน้าฟอร์ม');
+      if (ok) resetForm();
     }
 
     function resetForm() { document.getElementById('receiveForm').reset(); document.getElementById('toolItemsContainer').innerHTML = ''; toolItemCount = 0; setCurrentReceiveTime(); addToolItem(); }
