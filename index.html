@@ -666,9 +666,6 @@
                 <div class="col-md-6">
                   <label class="form-label">วันที่และเวลารับเครื่องมือ</label>
                   <input type="text" class="form-control" id="receivedAt" readonly>
-                </div>                <div class="col-md-6">
-                  <label class="form-label">หมายเหตุเพิ่มเติม</label>
-                  <input type="text" class="form-control" id="note" placeholder="หมายเหตุ เช่น ส่งก่อนวันผ่าตัด">
                 </div>
               </div>
 
@@ -686,6 +683,18 @@
                 <button type="button" class="btn btn-soft w-100" id="addToolBtn">
                   <i class="bi bi-plus-lg"></i> เพิ่มชุดเครื่องมือ
                 </button>
+              </div>
+
+              <div class="row g-3 mt-2">
+                <div class="col-md-6">
+                  <label class="form-label">หมายเหตุเพิ่มเติม</label>
+                  <input type="text" class="form-control" id="note" placeholder="หมายเหตุ เช่น ส่งก่อนวันผ่าตัด">
+                </div>
+
+                <div class="col-md-6">
+                  <label class="form-label">ผู้รับ</label>
+                  <input type="text" class="form-control" id="receiverName" placeholder="ระบุชื่อผู้รับเครื่องมือ" required>
+                </div>
               </div>
 
               <div class="upload-progress-box" id="uploadProgressBox">
